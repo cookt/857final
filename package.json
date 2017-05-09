@@ -1,0 +1,11 @@
+{
+  "name": "857final",
+  "version": "1.0.0",
+  "description": "",
+  "main": "decode_logs.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tom Cook, Alex Latham",
+  "license": "ISC"
+}
