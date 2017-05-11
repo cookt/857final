@@ -6,6 +6,59 @@ if (typeof web3 !== 'undefined') {
     var web3 = new Web3();
     web3.setProvider(new web3.providers.HttpProvider("http://localhost:8545"));
 }
+var SolidityCoder = require("web3/lib/solidity/coder.js");
+
+function ContractHistory(name, address, abi) {
+    this.name = name;
+    this.address = address;
+    this.abi = abi;
+    this.txns = [];  // fill with api calls
+
+    this.show = function(){
+        for (var i = 0; i < this.txns.length; i++){
+            console.log(this.txns[i])
+        }
+    };
+    // Adapted from https://ethereum.stackexchange.com/questions/1381/how-do-i-parse-the-transaction-receipt-log-with-web3-js
+    // You might want to put the following in a loop to handle all logs in this receipt.
+    // O( nlogs * abi.legnth)
+    this.parseTxReceipt = function(txReceipt) {
+        log_data = [];
+        for (var i = 0; i < txReceipt.logs.length; i++) {
+            var log = txReceipt.logs[i];
+            console.log(log);
+            var event = null;
+            for (var j = 0; j < this.abi.length; j++) {
+                var item = this.abi[j];
+                if (item.type != "event") continue;
+                var signature = item.name + "(" + item.inputs.map(function(input) {
+                    return input.type;
+                }).join(",") + ")";
+                var hash = web3.sha3(signature);
+                for ( var topic_i = 0; topic_i < log.topics.length; topic_i++){
+                    if (hash == log.topics[i]) {
+                        console.log(item)
+                        event = item;
+                    }
+                }
+            }
+            if (event != null) {
+                var inputs = event.inputs.map(function(input) {
+                    return input.type;
+                });
+                var data = SolidityCoder.decodeParams(inputs, log.data.replace("0x", ""));
+                // Do something with the data. Depends on the log and what you're using the data for.
+                log_data.push(data);
+            }
+        }
+        return log_data;
+    };
+} 
+
+function AddressHistory(address) {
+    this.txns = [];
+    this.type = 0; // 0 for rando , other id for known entities
+}
 ethereum_lottery_address = "0x9473BC8BB575Ffc15CB2179cd9398Bdf5730BF55";
 ethereum_lottery_abi = [{
     "constant": true,
@@ -323,49 +376,13 @@ ethereum_lottery_abi = [{
     "type": "event"
 }];
 sample_txHash = "0x5b119e00e759e5f5731b11bde1d0acd56591a4bb2f2183b4c877a69e1ff366f1";
-var SolidityCoder = require("web3/lib/solidity/coder.js");
 
 
-// Adapted from https://ethereum.stackexchange.com/questions/1381/how-do-i-parse-the-transaction-receipt-log-with-web3-js
 
-// You might want to put the following in a loop to handle all logs in this receipt.
-// O( nlogs * abi.legnth)
-var parseTxReceipt = function(txReceipt) {
-    log_data = [];
-    for (var i = 0; i < txReceipt.logs.length; i++) {
-        var log = txReceipt.logs[i];
-        console.log(log);
-        var event = null;
-        for (var j = 0; j < ethereum_lottery_abi.length; j++) {
-            var item = ethereum_lottery_abi[j];
-            if (item.type != "event") continue;
-            var signature = item.name + "(" + item.inputs.map(function(input) {
-                return input.type;
-            }).join(",") + ")";
-            var hash = web3.sha3(signature);
-            for ( var topic_i = 0; topic_i < log.topics.length; topic_i++){
-            	if (hash == log.topics[i]) {
-            		console.log(item)
-                	event = item;
-            	}
-            }
-            
-        }
-        if (event != null) {
-            var inputs = event.inputs.map(function(input) {
-                return input.type;
-            });
-            var data = SolidityCoder.decodeParams(inputs, log.data.replace("0x", ""));
-            //console.log(data)
-            // Do something with the data. Depends on the log and what you're using the data for.
-            log_data.push(data);
-        }
-    }
-    return log_data;
-}
 
 txnReceipt = web3.eth.getTransactionReceipt(sample_txHash);
-parsed_txn_log = parseTxReceipt(txnReceipt);
+var eth_lottery = new ContractHistory("Ethereum Lottery", ethereum_lottery_address, ethereum_lotttery_abi);
+parsed_txn_log = eth_lottery.parseTxReceipt(txnReceipt);
 for (var i = 0; i < parsed_txn_log.length; i++) {
 	console.log(parsed_txn_log[i]);
 }
