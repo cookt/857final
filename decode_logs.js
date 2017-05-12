@@ -20,22 +20,28 @@ function ContractHistory(name, address, abi) {
     this.address = address;
     this.abi = abi;
     this.txns = []; //just gets the 
-    this.parsed_txns = [];  
-    var self = this;
+    this.logEvents = [];
+    var self = this;   //for in event callbacks, to be able to reference the right 'this'
     //display txns
-    this.show = function(txns){
-        logger.info("#EventsOfInterest:"+this.txns.length);
+    this.showTxns = function(){
+        logger.info("#Transactions:"+this.txns.length);
 
         for (var i = 0; i < this.txns.length; i++){
             logger.info(this.txns[i]);
         }
     };
 
+    this.showLogs = function(){
+        logger.info("#EventsOfInterest:"+this.logEvents.length);
+
+        for (var i = 0; i < this.logEvents.length; i++){
+            logger.info(this.logEvents[i]);
+        }
+    };
     // Adapted from https://ethereum.stackexchange.com/questions/1381/how-do-i-parse-the-transaction-receipt-log-with-web3-js
     // You might want to put the following in a loop to handle all logs in this receipt.
     // O( nlogs * abi.legnth)
-    this.parseTxReceipt = function(txReceipt) {
-        log_events = [];
+    this.parseTxnReceipt = function(txReceipt) {
         logger.info("Gas used: "+txReceipt.gas_used)
         for (var i = 0; i < txReceipt.logs.length; i++) {
             var log = txReceipt.logs[i];
@@ -66,10 +72,9 @@ function ContractHistory(name, address, abi) {
                 result["data"] = data;
                 result["inputs"] = inputs;
                 result["event"] = event.name;
-                log_events.push(result);
+                this.logEvents.push(result);
             }
         }
-        return log_events;
     };
 
     //users globals to request normal txn data from etherscan
@@ -85,10 +90,22 @@ function ContractHistory(name, address, abi) {
             res.on('end', function() {
                 txn_data  = JSON.parse(body);
                 self.txns = txn_data['result'];
-                self.show();
+                self.showTxns();
+                self.getLogs(); //ordering dependence
             });
         });
     };
+
+    this.getLogs = function(){
+        for (var i = 0; i < this.txns.length; i++){
+            logger.info(this.txns[i]);
+            txnReceipt = web3.eth.getTransactionReceipt(this.txns[i].hash);
+            this.parseTxnReceipt(txnReceipt);
+            this.showLogs();
+        }
+    }
+
+
 } 
 
 function AddressHistory(address) {
