@@ -1,3 +1,5 @@
+logger = require('./logger');
+request = require("request");
 if (typeof web3 !== 'undefined') {
     web3 = new Web3(web3.currentProvider);
 } else {
@@ -5,28 +7,38 @@ if (typeof web3 !== 'undefined') {
     var Web3 = require('web3');
     var web3 = new Web3();
     web3.setProvider(new web3.providers.HttpProvider("http://localhost:8545"));
+    logger.info("Coinbase: "+web3.eth.coinbase);
 }
 var SolidityCoder = require("web3/lib/solidity/coder.js");
+var API_URL = "http://api.etherscan.io/api?module=account&action=txlist";
+var API_TOKEN = "&apikey=CCT1MY4RTXUIYV6BXF5W1TKW4J3E71W3PG";
 
+
+//Contract object to gather data and analzye
 function ContractHistory(name, address, abi) {
     this.name = name;
     this.address = address;
     this.abi = abi;
-    this.txns = [];  // fill with api calls
+    this.txns = []; //just gets the 
+    this.parsed_txns = [];  
+    var self = this;
+    //display txns
+    this.show = function(txns){
+        logger.info("#EventsOfInterest:"+this.txns.length);
 
-    this.show = function(){
         for (var i = 0; i < this.txns.length; i++){
-            console.log(this.txns[i])
+            logger.info(this.txns[i]);
         }
     };
+
     // Adapted from https://ethereum.stackexchange.com/questions/1381/how-do-i-parse-the-transaction-receipt-log-with-web3-js
     // You might want to put the following in a loop to handle all logs in this receipt.
     // O( nlogs * abi.legnth)
     this.parseTxReceipt = function(txReceipt) {
-        log_data = [];
+        log_events = [];
+        logger.info("Gas used: "+txReceipt.gas_used)
         for (var i = 0; i < txReceipt.logs.length; i++) {
             var log = txReceipt.logs[i];
-            console.log(log);
             var event = null;
             for (var j = 0; j < this.abi.length; j++) {
                 var item = this.abi[j];
@@ -37,21 +49,45 @@ function ContractHistory(name, address, abi) {
                 var hash = web3.sha3(signature);
                 for ( var topic_i = 0; topic_i < log.topics.length; topic_i++){
                     if (hash == log.topics[i]) {
-                        console.log(item)
+                        logger.info("Topic: ");
+                        logger.info(item);
                         event = item;
                     }
                 }
             }
+            //Decode inputs
             if (event != null) {
                 var inputs = event.inputs.map(function(input) {
                     return input.type;
                 });
                 var data = SolidityCoder.decodeParams(inputs, log.data.replace("0x", ""));
                 // Do something with the data. Depends on the log and what you're using the data for.
-                log_data.push(data);
+                result = {};
+                result["data"] = data;
+                result["inputs"] = inputs;
+                result["event"] = event.name;
+                log_events.push(result);
             }
         }
-        return log_data;
+        return log_events;
+    };
+
+    //users globals to request normal txn data from etherscan
+    this.getTxns = function() {
+        // tnxs = { "normal": [], "internal": []};
+        request
+        .get(API_URL+"&address="+this.address+API_TOKEN)
+        .on("response",function(res){
+            var body = '';
+            res.on('data', function(chunk) {
+                body += chunk;
+            });
+            res.on('end', function() {
+                txn_data  = JSON.parse(body);
+                self.txns = txn_data['result'];
+                self.show();
+            });
+        });
     };
 } 
 
@@ -60,329 +96,7 @@ function AddressHistory(address) {
     this.type = 0; // 0 for rando , other id for known entities
 }
 ethereum_lottery_address = "0x9473BC8BB575Ffc15CB2179cd9398Bdf5730BF55";
-ethereum_lottery_abi = [{
-    "constant": true,
-    "inputs": [{
-        "name": "",
-        "type": "uint256"
-    }],
-    "name": "ledger",
-    "outputs": [{
-        "name": "WinningNum1",
-        "type": "uint8"
-    }, {
-        "name": "WinningNum2",
-        "type": "uint8"
-    }, {
-        "name": "WinningNum3",
-        "type": "uint8"
-    }, {
-        "name": "WinningNum4",
-        "type": "uint8"
-    }, {
-        "name": "ClosingHash",
-        "type": "bytes32"
-    }, {
-        "name": "OpeningHash",
-        "type": "bytes32"
-    }, {
-        "name": "Guess4OutOf4",
-        "type": "uint256"
-    }, {
-        "name": "Guess3OutOf4",
-        "type": "uint256"
-    }, {
-        "name": "Guess2OutOf4",
-        "type": "uint256"
-    }, {
-        "name": "Guess1OutOf4",
-        "type": "uint256"
-    }, {
-        "name": "PriceOfTicket",
-        "type": "uint256"
-    }, {
-        "name": "ExpirationTime",
-        "type": "uint256"
-    }],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": true,
-    "inputs": [{
-        "name": "TheRand",
-        "type": "bytes32"
-    }],
-    "name": "CheckHash",
-    "outputs": [{
-        "name": "OpeningHash",
-        "type": "bytes32"
-    }],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": false,
-    "inputs": [{
-        "name": "MyNum1",
-        "type": "uint8"
-    }, {
-        "name": "MyNum2",
-        "type": "uint8"
-    }, {
-        "name": "MyNum3",
-        "type": "uint8"
-    }, {
-        "name": "MyNum4",
-        "type": "uint8"
-    }],
-    "name": "Play",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": true,
-    "inputs": [{
-        "name": "",
-        "type": "address"
-    }],
-    "name": "referral_ledger",
-    "outputs": [{
-        "name": "",
-        "type": "uint256"
-    }],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": false,
-    "inputs": [{
-        "name": "DrawIndex",
-        "type": "uint32"
-    }],
-    "name": "Withdraw",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": true,
-    "inputs": [],
-    "name": "Announcements",
-    "outputs": [{
-        "name": "",
-        "type": "string"
-    }],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": false,
-    "inputs": [{
-        "name": "new_hash",
-        "type": "bytes32"
-    }, {
-        "name": "priceofticket",
-        "type": "uint256"
-    }, {
-        "name": "guess4outof4",
-        "type": "uint256"
-    }, {
-        "name": "guess3outof4",
-        "type": "uint256"
-    }, {
-        "name": "guess2outof4",
-        "type": "uint256"
-    }, {
-        "name": "guess1outof4",
-        "type": "uint256"
-    }],
-    "name": "next_draw",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": false,
-    "inputs": [{
-        "name": "DrawIndex",
-        "type": "uint32"
-    }],
-    "name": "Refund",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": false,
-    "inputs": [],
-    "name": "Withdraw_referral",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": false,
-    "inputs": [{
-        "name": "new_fee",
-        "type": "uint8"
-    }],
-    "name": "set_referral_fee",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": false,
-    "inputs": [],
-    "name": "Deposit_referral",
-    "outputs": [],
-    "payable": true,
-    "type": "function"
-}, {
-    "constant": true,
-    "inputs": [],
-    "name": "IndexOfCurrentDraw",
-    "outputs": [{
-        "name": "",
-        "type": "uint256"
-    }],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": true,
-    "inputs": [{
-        "name": "DrawIndex",
-        "type": "uint8"
-    }, {
-        "name": "PlayerAddress",
-        "type": "address"
-    }],
-    "name": "MyBet",
-    "outputs": [{
-        "name": "Nums",
-        "type": "uint8[4]"
-    }],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": true,
-    "inputs": [],
-    "name": "referral_fee",
-    "outputs": [{
-        "name": "",
-        "type": "uint8"
-    }],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": false,
-    "inputs": [{
-        "name": "MyNum1",
-        "type": "uint8"
-    }, {
-        "name": "MyNum2",
-        "type": "uint8"
-    }, {
-        "name": "MyNum3",
-        "type": "uint8"
-    }, {
-        "name": "MyNum4",
-        "type": "uint8"
-    }, {
-        "name": "ref",
-        "type": "address"
-    }],
-    "name": "PlayReferred",
-    "outputs": [],
-    "payable": true,
-    "type": "function"
-}, {
-    "constant": false,
-    "inputs": [{
-        "name": "MSG",
-        "type": "string"
-    }],
-    "name": "announce",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-}, {
-    "constant": false,
-    "inputs": [{
-        "name": "index",
-        "type": "uint32"
-    }, {
-        "name": "the_rand",
-        "type": "bytes32"
-    }],
-    "name": "announce_therand",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-}, {
-    "inputs": [],
-    "payable": false,
-    "type": "constructor"
-}, {
-    "anonymous": false,
-    "inputs": [{
-        "indexed": true,
-        "name": "IndexOfDraw",
-        "type": "uint256"
-    }, {
-        "indexed": false,
-        "name": "OpeningHash",
-        "type": "bytes32"
-    }, {
-        "indexed": false,
-        "name": "PriceOfTicketInWei",
-        "type": "uint256"
-    }, {
-        "indexed": false,
-        "name": "WeiToWin",
-        "type": "uint256"
-    }],
-    "name": "NewDrawReadyToPlay",
-    "type": "event"
-}, {
-    "anonymous": false,
-    "inputs": [{
-        "indexed": true,
-        "name": "IndexOfDraw",
-        "type": "uint32"
-    }, {
-        "indexed": false,
-        "name": "WinningNumber1",
-        "type": "uint8"
-    }, {
-        "indexed": false,
-        "name": "WinningNumber2",
-        "type": "uint8"
-    }, {
-        "indexed": false,
-        "name": "WinningNumber3",
-        "type": "uint8"
-    }, {
-        "indexed": false,
-        "name": "WinningNumber4",
-        "type": "uint8"
-    }, {
-        "indexed": false,
-        "name": "TheRand",
-        "type": "bytes32"
-    }],
-    "name": "DrawReadyToPayout",
-    "type": "event"
-}, {
-    "anonymous": false,
-    "inputs": [{
-        "indexed": false,
-        "name": "Wei",
-        "type": "uint256"
-    }],
-    "name": "PlayerWon",
-    "type": "event"
-}];
-sample_txHash = "0x5b119e00e759e5f5731b11bde1d0acd56591a4bb2f2183b4c877a69e1ff366f1";
+ethereum_lottery_abi = require("./abis/TheEthereumLottery.json");
+var eth_lottery = new ContractHistory("Ethereum Lottery", ethereum_lottery_address, ethereum_lottery_abi);
 
-
-
-
-txnReceipt = web3.eth.getTransactionReceipt(sample_txHash);
-var eth_lottery = new ContractHistory("Ethereum Lottery", ethereum_lottery_address, ethereum_lotttery_abi);
-parsed_txn_log = eth_lottery.parseTxReceipt(txnReceipt);
-for (var i = 0; i < parsed_txn_log.length; i++) {
-	console.log(parsed_txn_log[i]);
-}
+eth_lottery.getTxns();
