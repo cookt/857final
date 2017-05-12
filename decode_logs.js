@@ -117,3 +117,7 @@ ethereum_lottery_abi = require("./abis/TheEthereumLottery.json");
 var eth_lottery = new ContractHistory("Ethereum Lottery", ethereum_lottery_address, ethereum_lottery_abi);
 
 eth_lottery.getTxns();
+
+honest_dice_address = "0xD79B4C6791784184e2755B2fC1659eaaB0f80456";
+honest_dice_abi = require("./abis/HonestDice.json");
+var honest_dice = new ContractHistory("HonestDice",honest_dice_address, honest_dice_abi);
