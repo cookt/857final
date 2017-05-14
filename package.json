@@ -1,14 +1,21 @@
 {
   "name": "857final",
   "version": "1.0.0",
-  "description": "",
+  "description": "Ethereum Blockchain Log auditing",
   "main": "decode_logs.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start" : "echo \"Error no start specified\" && exit 1"
   },
   "dependencies": {
-  	"web3" : "0.18.4"
+  	"web3" : "0.18.4",
+    "colors": "1.1.2",
+    "request": "2.81.0",
+    "d3": "3.5.17",
+    "jsdom": "10.1.0",
+    "express":"2.5.6",
+    "ejs": "4.15.2"
   },
   "author": "Tom Cook, Alex Latham",
-  "license": "ISC"
+  "license": "MIT"
 }
