@@ -1,7 +1,7 @@
 var colors = require('colors/safe');
 
 var info = function () {
-    var args = [colors.blue('[INFO] ')].concat(Array.prototype.slice.call(arguments, 0));
+    var args = [colors.cyan('[INFO] ')].concat(Array.prototype.slice.call(arguments, 0));
     console.log.apply(console, args);
 };
 
