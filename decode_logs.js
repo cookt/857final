@@ -104,7 +104,7 @@ function ContractHistory(name, address, abi) {
         // tnxs = { "normal": [], "internal": []};
         var txnFilename = "./txndata/"+this.name+".json";
         if (fs.existsSync(txnFilename)){
-            txn_data = JSON.parse(fs.readFileSync(txnFilename, options));
+            txn_data = JSON.parse(fs.readFileSync(txnFilename));
             self.txns = txn_data;
             return;
         }
@@ -118,7 +118,7 @@ function ContractHistory(name, address, abi) {
             res.on('end', function() {
                 txn_data  = JSON.parse(body);
                 self.txns = txn_data['result'];
-                //self.showTxns(txnFilename);
+                self.showTxns(txnFilename);
                 self.getLogs(); //ordering dependence
             });
         });
@@ -173,4 +173,7 @@ function AddressHistory(address) {
 //On ropsten
 
 simple_dao_test_address = "0x6e41c6ab279b57cbc813fa60b66a64910834c5b826f72034ef30e92e6c8fa336";
-simple_dao_abi;
+simple_dao_abi = [{"constant":false,"inputs":[{"name":"to","type":"address"}],"name":"donate","outputs":[],"payable":true,"type":"function"},{"constant":false,"inputs":[{"name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"to","type":"address"}],"name":"queryCredit","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"credit","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"}];
+simple_dao = new ContractHistory("SimpleDao", simple_dao_test_address, simple_dao_abi);
+
+simple_dao.getTxns();
