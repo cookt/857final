@@ -158,20 +158,20 @@ def txnJSON2Dict(JSONstring):
 	print "======================="
 
 	####plot gas histogram
-	# mu, sigma = totalAveGasPerTxn, stDevGas
-	# aveGasPerUserList = [addressStats[address]["aveGasPerTxn"] for address in addressStats]
-	# x = np.array(aveGasPerUserList)
+	mu, sigma = totalAveGasPerTxn, stDevGas
+	aveGasPerUserList = [addressStats[address]["aveGasPerTxn"] for address in addressStats]
+	x = np.array(aveGasPerUserList)
 
-	# # the histogram of the data
-	# n, bins, patches = plt.hist(x, 25, facecolor='green', alpha=0.75)
+	# the histogram of the data
+	n, bins, patches = plt.hist(x, 25, facecolor='green', alpha=0.75)
 
-	# plt.ylabel('Number of users')
-	# plt.xlabel('Amount of gas spent')
-	# plt.title("Rouleth4.8: histogram of average gas per user per transaction")
-	# plt.axis([min(aveGasPerUserList), max(aveGasPerUserList), 0, 10])
-	# plt.grid(True)
+	plt.ylabel('Number of users')
+	plt.xlabel('Amount of gas spent (max allowed = ' + str(allowedGas) + ')')
+	plt.title("Rouleth4.8: histogram of average gas per user per transaction")
+	plt.axis([min(aveGasPerUserList), max(aveGasPerUserList), 0, 10])
+	plt.grid(True)
 
-	# plt.show()
+	plt.show()
 
 	####plot value histograms
 	# mu2, sigma2 = totalAveGasPerTxn, stDevValue
@@ -191,7 +191,7 @@ def txnJSON2Dict(JSONstring):
 
 files = ["./txndata/EthereumLottery.json", "./txndata/Etheroll.json", "./txndata/HonestDice.json", "./txndata/Rouleth3.5.json", "./txndata/Rouleth4.8.json"]
 
-with open(files[3], 'r') as myfile:
+with open(files[4], 'r') as myfile:
 	data=myfile.read()
 
 txnJSON2Dict(data)
