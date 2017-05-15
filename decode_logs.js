@@ -21,10 +21,12 @@ function ContractHistory(name, address, abi) {
     this.name = name;
     this.address = address;
     this.abi = abi;
-    this.txns = []; //just gets the 
+    this.txns = []; //just gets the hashes and txn metadata
+    this.txnTraces = [];
     this.logEvents = [];
     var self = this;   //for in event callbacks, to be able to reference the right 'this'
-    //display txns
+    
+    //display txns and write to file
     this.showTxns = function(txnFilename){
         logger.info("#Transactions:"+this.txns.length);
         fs.writeFile(txnFilename,JSON.stringify(this.txns),(err) => {
@@ -32,7 +34,7 @@ function ContractHistory(name, address, abi) {
                 logger.error(err);
                 return;
             };
-            console.log(this.name+" txn.json file has been created");
+            logger.info(this.name+" txn.json file has been created");
         });
         for (var i = 0; i < this.txns.length; i++){
             logger.info("TXN");
@@ -43,12 +45,13 @@ function ContractHistory(name, address, abi) {
     this.showLogs = function(index) {
         logger.info("#EventsOfInterest:"+this.logEvents.length);
         if (this.logEvents.length > 0) {
-            fs.writeFile("./txnlogs/"+this.name+index+".json",JSON.stringify(this.logEvents),(err) => {
+            var logFilename = "./txnlogs/"+this.name+index+"log.json";
+            fs.writeFile(logFilename,JSON.stringify(this.logEvents),(err) => {
                 if (err) {
                     logger.error(err);
                     return;
                 };
-                console.log(this.name+".json log file has been created");
+                logger.info(this.name+".json log file has been created");
             });
             for (var i = 0; i < this.logEvents.length; i++){
                 logger.info("LOG EVENT");
@@ -132,15 +135,43 @@ function ContractHistory(name, address, abi) {
             this.parseTxnReceipt(txnReceipt);
             this.showLogs(i);
         }
+    };
+
+    //gets the traces for all available transactions for the contract and stores result
+    this.getTxnTraces = function() {
+        for (var i = 0; i < this.txns.length; i+=1){
+            this.traceTxn(this.txns[i].hash, i);
+        }
+        var traceFileName = "./txntraces/"+self.name+"trace.json";
+        fs.writeFile(traceFileName, (err) => {
+            if (err) {
+                logger.error(err);
+                return;
+            };
+            logger.info(this.name+"trace.json log file has been created");
+        });
+    });
+
+    //Using parity jsonrpc to replay txn by hash
+    this.traceTxn = function(txnHash, index) {
+        web.currentProvider.sendAsync({
+            method: "trace_replayTransaction",
+            params: [txnHash, ['trace', 'vmTrace', 'stateDiff']],
+            id : "1.0",
+            jsonrpc: :"2.0"
+        }, 
+        function(err, result){
+            if (err) {
+                logger.error(err);
+                return;
+            } else {
+                var data = JSON.parse(result['result']);
+                self.txnTraces.push(data);
+            }
+        });
     }
 
-
 } 
-
-function AddressHistory(address) {
-    this.txns = [];
-    this.type = 0; // 0 for rando , other id for known entities
-}
 // ethereum_lottery_address = "0x9473BC8BB575Ffc15CB2179cd9398Bdf5730BF55";
 // ethereum_lottery_abi = require("./abis/TheEthereumLottery.json");
 // var eth_lottery = new ContractHistory("EthereumLottery", ethereum_lottery_address, ethereum_lottery_abi);
@@ -172,8 +203,8 @@ function AddressHistory(address) {
 // rouleth_48.getTxns();
 //On ropsten
 
-simple_dao_test_address = "0x6e41c6ab279b57cbc813fa60b66a64910834c5b826f72034ef30e92e6c8fa336";
-simple_dao_abi = [{"constant":false,"inputs":[{"name":"to","type":"address"}],"name":"donate","outputs":[],"payable":true,"type":"function"},{"constant":false,"inputs":[{"name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"to","type":"address"}],"name":"queryCredit","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"credit","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"}];
-simple_dao = new ContractHistory("SimpleDao", simple_dao_test_address, simple_dao_abi);
+// simple_dao_test_address = "0x6e41c6ab279b57cbc813fa60b66a64910834c5b826f72034ef30e92e6c8fa336";
+// simple_dao_abi = [{"constant":false,"inputs":[{"name":"to","type":"address"}],"name":"donate","outputs":[],"payable":true,"type":"function"},{"constant":false,"inputs":[{"name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"to","type":"address"}],"name":"queryCredit","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"credit","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"}];
+// simple_dao = new ContractHistory("SimpleDao", simple_dao_test_address, simple_dao_abi);
 
-simple_dao.getTxns();
+// simple_dao.getTxns();
