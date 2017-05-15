@@ -1,5 +1,9 @@
 import json
 import math
+import numpy as np
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+import scipy.stats as stats
 
 def txnJSON2Dict(JSONstring):
 	jdata = json.loads(JSONstring)
@@ -61,8 +65,20 @@ def txnJSON2Dict(JSONstring):
 	variance = variance / numTxns
 	stDevGas = math.sqrt(variance)
 
+	totalAveValPerTxn = float(sum(totalValues)) / len(totalValues)
+	valVariance = 0
+	
+	for value in totalValues:
+		valVariance += math.pow(value - totalAveValPerTxn, 2)
+	
+	valVariance = valVariance / numTxns
+	stDevValue = math.sqrt(valVariance)
+
+
 	print "Average gas used per txn on contract: " + str(totalAveGasPerTxn)
 	print "StDev gas used per txn on contract: " + str(stDevGas)
+	print "Average value per txn on contract: " + str(totalAveValPerTxn)
+	print "StDev gas used per txn on contract: " + str(stDevValue)
 	print "Unique addresses: " + str(len(uniqueAddresses))
 	print "total NumTxns: " + str(numTxns)
 
@@ -73,7 +89,7 @@ def txnJSON2Dict(JSONstring):
 		addressStats[address]["totalGas"] = sum(addressStats[address]["gasUsed"])
 		addressStats[address]["aveGasPerTxn"] = addressStats[address]["totalGas"] / addressStats[address]["numTxns"]
 		addressStats[address]["numDevsGasPerTxn"] = [(i - totalAveGasPerTxn) / stDevGas for i in addressStats[address]["gasUsed"]]
-		if any(t > 1.5 for t in addressStats[address]["numDevsGasPerTxn"]):
+		if any(t > 2.0 for t in addressStats[address]["numDevsGasPerTxn"]):
 			naughtyBoys.append(address)
 			addressStats[address]["NAUGHTYBOY"] = "NAUGHTYBOY"
 		addressStats[address]["averageNumDevsGasPerTxn"] = (addressStats[address]["aveGasPerTxn"] - totalAveGasPerTxn) / stDevGas
@@ -121,7 +137,6 @@ def txnJSON2Dict(JSONstring):
 
 	
 		#While we're at it, print erroneous txns
-		
 		if (addressStats[address]["errors"] > 0):
 			print address
 			print "Number tnxs: " + str(addressStats[address]["numTxns"])
@@ -141,12 +156,42 @@ def txnJSON2Dict(JSONstring):
 	print "~~~~VALUE HISTOGRAM~~~~"
 	print [len(j) for j in valHistogram]
 	print "======================="
-	
 
+	####plot gas histogram
+	mu, sigma = totalAveGasPerTxn, stDevGas
+	aveGasPerUserList = [addressStats[address]["aveGasPerTxn"] for address in addressStats]
+	x = np.array(aveGasPerUserList)
+
+	# the histogram of the data
+	n, bins, patches = plt.hist(x, 25, facecolor='green', alpha=0.75)
+
+	plt.ylabel('Number of users')
+	plt.xlabel('Amount of gas spent (max allowed = ' + str(allowedGas) + ')')
+	plt.title("Rouleth4.8: histogram of average gas per user per transaction")
+	plt.axis([min(aveGasPerUserList), max(aveGasPerUserList), 0, 10])
+	plt.grid(True)
+
+	plt.show()
+
+	####plot value histograms
+	# mu2, sigma2 = totalAveGasPerTxn, stDevValue
+	# aveValuePerUserList = [int(addressStats[address]["value"] / (10000000*addressStats[address]["numTxns"])) for address in addressStats]
+	# x = np.array(aveValuePerUserList)
+
+	# # the histogram of the data
+	# n, bins, patches = plt.hist(x, 50, facecolor='green', alpha=0.75)
+
+	# plt.xlabel('Average value per transaction (in 10^7 wei)')
+	# plt.ylabel('Number of users')
+	# plt.title("Rouleth4.8: histogram of average value per user per transaction")
+	# plt.axis([0, max(aveValuePerUserList), 0, 30])
+	# plt.grid(True)
+
+	# plt.show()
 
 files = ["./txndata/EthereumLottery.json", "./txndata/Etheroll.json", "./txndata/HonestDice.json", "./txndata/Rouleth3.5.json", "./txndata/Rouleth4.8.json"]
 
-with open(files[1], 'r') as myfile:
+with open(files[4], 'r') as myfile:
 	data=myfile.read()
 
 txnJSON2Dict(data)
