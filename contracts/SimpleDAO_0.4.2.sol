@@ -24,7 +24,7 @@ contract Mallory {
   SimpleDAO public dao;
   address owner;
 
-  function Mallory(SimpleDAO addr){ 
+  function Mallory(SimpleDAO addr){
     owner = msg.sender;
     dao = addr;
   }

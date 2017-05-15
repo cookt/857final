@@ -11,9 +11,10 @@ def txnJSON2Dict(JSONstring):
 	 
 	totalGas = []
 	uniqueAddresses = []
+	totalValues = []
 	addressStats = {}
 
-	#{user:{gasUsed: ; txns: , }
+	#{user:{gasUsed: ; txns: , }... construct dictionary of user statistics
 	for txn in jdata:
 		user = txn["from"]
 		if user == owner: 
@@ -26,6 +27,7 @@ def txnJSON2Dict(JSONstring):
 
 		uniqueAddresses.append(user)
 		totalGas.append(gasUsed)
+		totalValues.append(value)
 
 
 		if user in addressStats:
@@ -34,8 +36,12 @@ def txnJSON2Dict(JSONstring):
 			addressStats[user]["errors"] = addressStats[user]["errors"] + isError
 			addressStats[user]["gasUsed"] = addressStats[user]["gasUsed"] + [gasUsed]
 			addressStats[user]["outOfGas"] = addressStats[user]["outOfGas"] + outOfGas
+			if (isError==1):
+				addressStats[user]["badTxns"].append(txn["hash"])
 		else:
-			userStats= {"numTxns" : 1, "value" : value, "errors" : isError, "gasUsed" : [gasUsed], "outOfGas" : outOfGas}
+			userStats= {"numTxns" : 1, "value" : value, "errors" : isError, "gasUsed" : [gasUsed], "outOfGas" : outOfGas, "badTxns" : []}
+			if (isError):
+				userStats["badTxns"].append(txn["hash"])
 			addressStats[user] = userStats
 
 
@@ -44,14 +50,13 @@ def txnJSON2Dict(JSONstring):
 
 	
 	#Get standard deviation for gas used over all txns on contract from all users
-	numTxns = len(totalGas)
+	numTxns = len(jdata)
 
 	totalAveGasPerTxn = float(sum(totalGas)) / numTxns
 	variance = 0
 	
 	for gas in totalGas:
 		variance += math.pow(gas - totalAveGasPerTxn, 2)
-		# print variance
 	
 	variance = variance / numTxns
 	stDevGas = math.sqrt(variance)
@@ -59,6 +64,7 @@ def txnJSON2Dict(JSONstring):
 	print "Average gas used per txn on contract: " + str(totalAveGasPerTxn)
 	print "StDev gas used per txn on contract: " + str(stDevGas)
 	print "Unique addresses: " + str(len(uniqueAddresses))
+	print "total NumTxns: " + str(numTxns)
 
 
 	#For each user, get the number stDevs away each gas usage is from the global mean, and number of devs for average usage
@@ -67,19 +73,74 @@ def txnJSON2Dict(JSONstring):
 		addressStats[address]["totalGas"] = sum(addressStats[address]["gasUsed"])
 		addressStats[address]["aveGasPerTxn"] = addressStats[address]["totalGas"] / addressStats[address]["numTxns"]
 		addressStats[address]["numDevsGasPerTxn"] = [(i - totalAveGasPerTxn) / stDevGas for i in addressStats[address]["gasUsed"]]
-		if any(t > 2.0 for t in addressStats[address]["numDevsGasPerTxn"]):
+		if any(t > 1.5 for t in addressStats[address]["numDevsGasPerTxn"]):
 			naughtyBoys.append(address)
+			addressStats[address]["NAUGHTYBOY"] = "NAUGHTYBOY"
 		addressStats[address]["averageNumDevsGasPerTxn"] = (addressStats[address]["aveGasPerTxn"] - totalAveGasPerTxn) / stDevGas
 
 	print "NAUGHTY BOYS: " + str(len(naughtyBoys))
 
+	
 
+	# Compute histograms of average gas/value per txn per user
 
-	print
+	numBuckets = 100.
+
+	gasHistogram = [[] for i in range(0,100)]
+	bucketSize = max(totalGas) / numBuckets
+
+	valHistogram = [[] for i in range(0,100)]
+	valBucketSize = max(totalValues) / numBuckets
+
+	
 	for address in addressStats:
-		print address
-		print addressStats[address]
-		print ""
+		
+		avgUserGas = int(addressStats[address]["totalGas"] / float(addressStats[address]["numTxns"]))
+		bucket = 0
+		val = avgUserGas
+		while (val >= bucketSize):
+			val -= bucketSize
+			val = val
+			bucket += 1
+		if bucket == numBuckets:
+			bucket -= 1
+		gasHistogram[bucket].append(address)
+
+
+		avgUserVal = int(addressStats[address]["value"] / float(addressStats[address]["numTxns"]))
+		bucket = 0
+		val = avgUserVal
+		while (val >= valBucketSize):
+			val -= valBucketSize
+			val = val
+			bucket += 1
+		if bucket == numBuckets:
+			bucket -= 1
+		valHistogram[bucket].append(address)
+
+	
+		#While we're at it, print erroneous txns
+		print "===========BAD TXNS=========="
+		if (addressStats[address]["errors"] > 0):
+			print address
+			print "Number tnxs: " + str(addressStats[address]["numTxns"])
+			print "Num errors: " + str(addressStats[address]["errors"])
+			print "averageNumDevsGasPerTxn: " + str(addressStats[address]["averageNumDevsGasPerTxn"])
+			print "aveGasPerTxn: " + str(addressStats[address]["aveGasPerTxn"])
+			print "Erroneous txns: " + str(addressStats[address]["badTxns"])
+			print "==================================================================="
+
+
+	#######Print Histograms of average gas/value per user
+	print "\n\n\n"
+	print "=====GAS HISTOGRAM====="
+	print [len(j) for j in gasHistogram]
+	print "======================="
+	print "~~~~VALUE HISTOGRAM~~~~"
+	print [len(j) for j in valHistogram]
+	print "======================="
+	
+
 
 files = ["./txndata/EthereumLottery.json", "./txndata/Etheroll.json", "./txndata/HonestDice.json", "./txndata/Rouleth3.5.json", "./txndata/Rouleth4.8.json"]
 

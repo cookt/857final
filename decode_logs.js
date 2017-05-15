@@ -159,7 +159,7 @@ function AddressHistory(address) {
 
 // etheroll.getTxns();
 
-// rouleth_35_address = "0x18a672E11D637fffADccc99B152F4895Da069601";
+// rouleth_35_address = "0x18a672E11D637ffxfADccc99B152F4895Da069601";
 // rouleth_35_abi = require("./abis/Rouleth3.5.json");
 // var rouleth_35 = new ContractHistory("Rouleth3.5",rouleth_35_address,rouleth_35_abi);
 
