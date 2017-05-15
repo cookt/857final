@@ -93,6 +93,7 @@ def txnJSON2Dict(JSONstring):
 	valBucketSize = max(totalValues) / numBuckets
 
 	
+	print "===========USERS BAD TXNS=========="
 	for address in addressStats:
 		
 		avgUserGas = int(addressStats[address]["totalGas"] / float(addressStats[address]["numTxns"]))
@@ -120,7 +121,7 @@ def txnJSON2Dict(JSONstring):
 
 	
 		#While we're at it, print erroneous txns
-		print "===========BAD TXNS=========="
+		
 		if (addressStats[address]["errors"] > 0):
 			print address
 			print "Number tnxs: " + str(addressStats[address]["numTxns"])
@@ -130,6 +131,7 @@ def txnJSON2Dict(JSONstring):
 			print "Erroneous txns: " + str(addressStats[address]["badTxns"])
 			print "==================================================================="
 
+	print "===========END USERS WITH BAD TXNS=========="
 
 	#######Print Histograms of average gas/value per user
 	print "\n\n\n"
