@@ -12,9 +12,9 @@ if (typeof web3 !== 'undefined') {
     logger.info("Coinbase: "+web3.eth.coinbase);
 }
 const SolidityCoder = require("web3/lib/solidity/coder.js");
-//var API_URL = "http://api.etherscan.io/api?module=account&action=txlist";//mainnet
+var API_URL = "http://api.etherscan.io/api?module=account&action=txlist";//mainnet
 var API_TOKEN = "&apikey=CCT1MY4RTXUIYV6BXF5W1TKW4J3E71W3PG";
-var API_URL = "http://ropsten.etherscan.io/api?module=account&action=txlist";
+//var API_URL = "http://ropsten.etherscan.io/api?module=account&action=txlist";
 
 //Contract object to gather data and analzye
 function ContractHistory(name, address, abi) {
@@ -37,11 +37,12 @@ function ContractHistory(name, address, abi) {
             logger.info(this.name+" txn.json file has been created");
         });
         for (var i = 0; i < this.txns.length; i++){
-            logger.info("TXN");
-            logger.info(this.txns[i]);
+            //logger.info("TXN");
+            //logger.info(this.txns[i]);
         }
     };
 
+    //stores file to jso
     this.showLogs = function(index) {
         logger.info("#EventsOfInterest:"+this.logEvents.length);
         if (this.logEvents.length > 0) {
@@ -54,8 +55,8 @@ function ContractHistory(name, address, abi) {
                 logger.info(this.name+".json log file has been created");
             });
             for (var i = 0; i < this.logEvents.length; i++){
-                logger.info("LOG EVENT");
-                logger.info(this.logEvents[i]);
+                // logger.info("LOG EVENT");
+                // logger.info(this.logEvents[i]);
             }
         }
         
@@ -77,8 +78,8 @@ function ContractHistory(name, address, abi) {
                 var hash = web3.sha3(signature);
                 for ( var topic_i = 0; topic_i < log.topics.length; topic_i++){
                     if (hash == log.topics[i]) {
-                        logger.info("Topic: ");
-                        logger.info(item);
+                        //logger.info("Topic: ");
+                        //logger.info(item);
                         event = item;
                     }
                 }
@@ -107,9 +108,8 @@ function ContractHistory(name, address, abi) {
         // tnxs = { "normal": [], "internal": []};
         var txnFilename = "./txndata/"+this.name+".json";
         if (fs.existsSync(txnFilename)){
-            txn_data = JSON.parse(fs.readFileSync(txnFilename));
-            self.txns = txn_data;
-            return;
+            this.txns = JSON.parse(require(txnFilename));
+            this.getLogs();
         }
         request
         .get(API_URL+"&address="+this.address+API_TOKEN)
@@ -122,7 +122,7 @@ function ContractHistory(name, address, abi) {
                 txn_data  = JSON.parse(body);
                 self.txns = txn_data['result'];
                 self.showTxns(txnFilename);
-                self.getLogs(); //ordering dependence
+                self.getLogs();
             });
         });
     };
@@ -135,6 +135,7 @@ function ContractHistory(name, address, abi) {
             this.parseTxnReceipt(txnReceipt);
             this.showLogs(i);
         }
+        this.getTxnTraces();
     };
 
     //gets the traces for all available transactions for the contract and stores result
@@ -143,22 +144,22 @@ function ContractHistory(name, address, abi) {
             this.traceTxn(this.txns[i].hash, i);
         }
         var traceFileName = "./txntraces/"+self.name+"trace.json";
-        fs.writeFile(traceFileName, (err) => {
+        fs.writeFile(traceFileName, JSON.stringify(this.txnTraces),(err) => {
             if (err) {
                 logger.error(err);
                 return;
             };
             logger.info(this.name+"trace.json log file has been created");
         });
-    });
+    };
 
     //Using parity jsonrpc to replay txn by hash
     this.traceTxn = function(txnHash, index) {
-        web.currentProvider.sendAsync({
+        web3.currentProvider.sendAsync({
             method: "trace_replayTransaction",
             params: [txnHash, ['trace', 'vmTrace', 'stateDiff']],
             id : "1.0",
-            jsonrpc: :"2.0"
+            jsonrpc:"2.0"
         }, 
         function(err, result){
             if (err) {
@@ -190,11 +191,11 @@ function ContractHistory(name, address, abi) {
 
 // etheroll.getTxns();
 
-// rouleth_35_address = "0x18a672E11D637ffxfADccc99B152F4895Da069601";
-// rouleth_35_abi = require("./abis/Rouleth3.5.json");
-// var rouleth_35 = new ContractHistory("Rouleth3.5",rouleth_35_address,rouleth_35_abi);
+rouleth_35_address = "0x18a672E11D637fffADccc99B152F4895Da069601";
+rouleth_35_abi = require("./abis/Rouleth3.5.json");
+var rouleth_35 = new ContractHistory("Rouleth3.5",rouleth_35_address,rouleth_35_abi);
 
-// rouleth_35.getTxns();
+rouleth_35.getTxns();
 
 // rouleth_48_address = "0x908c41461Cddefb9F7B4d90C03B66c1C52Ab6093";
 // rouleth_48_abi = require("./abis/Rouleth4.8.json");
