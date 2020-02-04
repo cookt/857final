@@ -5,16 +5,13 @@
   "main": "decode_logs.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start" : "echo \"Error no start specified\" && exit 1"
+    "start": "echo \"Error no start specified\" && exit 1"
   },
   "dependencies": {
-  	"web3" : "0.18.4",
-    "colors": "1.1.2",
-    "request": "2.81.0",
-    "d3": "3.5.17",
-    "jsdom": "10.1.0",
-    "express":"2.5.6",
-    "ejs": "4.15.2"
+    "web3": "1.2.6",
+    "colors": "1.4.0",
+    "request": "2.88.0",
+    "express": "4.17.1"
   },
   "author": "Tom Cook, Alex Latham",
   "license": "MIT"
